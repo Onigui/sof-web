@@ -1,0 +1,49 @@
+name: Bootstrap Next Web
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Stop if repo already bootstrapped
+        run: |
+          if [ -f package.json ]; then
+            echo "Repo already has package.json. Aborting to avoid overwrite."
+            exit 1
+          fi
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Create Next.js app in temp dir
+        run: |
+          npx create-next-app@latest tmpweb \
+            --ts \
+            --tailwind \
+            --eslint \
+            --app \
+            --src-dir \
+            --import-alias "@/*" \
+            --use-npm
+          rsync -a tmpweb/ ./
+          rm -rf tmpweb
+
+      - name: Commit & push bootstrap
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -A
+          git commit -m "chore: bootstrap next app router + tailwind" || exit 0
+          git push
