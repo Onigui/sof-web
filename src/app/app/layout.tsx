@@ -41,6 +41,7 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Fila", href: "/app/fila" },
     { label: "Propostas", href: "/app/propostas" },
     { label: "Integração", href: "/app/integracao" },
+    { label: "Billing", href: "/app/billing" },
     { label: "Relatórios", href: "/app/relatorios" },
     { label: "Config", href: "/app/config" },
     { label: "Notificações", href: "/app/notificacoes" },
