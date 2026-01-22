@@ -314,6 +314,13 @@ export default function IntegracaoPage() {
             <p className="mt-2 text-sm text-slate-600">
               Procure a gestão para ativar o plano.
             </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <a
+                href="/app/billing"
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
+              >
+                Ir para Faturamento
+              </a>
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
