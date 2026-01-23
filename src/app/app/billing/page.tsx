@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { apiFetch, SubscriptionRequiredError } from "@/lib/api";
+import { getUser, type SessionUser } from "@/lib/session";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -431,6 +432,7 @@ export default function BillingPage() {
                       rel="noreferrer"
                       className="mt-2 inline-flex text-xs font-semibold text-slate-700 underline"
                     >
+                      Abrir Mercado Pago
                       Abrir pagamento
                     </a>
                   </div>

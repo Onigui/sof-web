@@ -37,6 +37,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [invoiceBanner, setInvoiceBanner] = useState<InvoiceSummary | null>(null);
+  const navItems = useMemo(() => {
+    if (!user?.role) return [];
+    if (user.role === "GESTAO") {
+      return [
+        { href: "/app/billing", label: "Billing" },
+        { href: "/app/auditoria", label: "Auditoria" },
+      ];
+    }
+    if (user.role === "ANALISTA") {
+      return [{ href: "/app/auditoria", label: "Auditoria" }];
+    }
+    return [];
 
   useEffect(() => {
     const token = getToken();
@@ -97,6 +109,7 @@ export default function AppLayout({
   useEffect(() => {
     const token = getToken();
     if (!token) {
+      setLoading(false);
       router.replace("/login");
       return;
     }
@@ -237,6 +250,12 @@ export default function AppLayout({
               Pagar agora
             </Link>
           </div>
+        </div>
+      ) : null}
+
+      {navItems.length > 0 ? (
+        <nav className="border-b border-slate-200 bg-white">
+          <div className="mx-auto flex max-w-5xl flex-wrap gap-2 px-4 py-3 text-sm font-semibold text-slate-600">
           {banner.message}
         </div>
       ) : null}
@@ -351,6 +370,7 @@ export default function AppLayout({
               <Link
                 key={item.href}
                 href={item.href}
+                className="rounded-full bg-slate-100 px-3 py-1 hover:bg-slate-200"
                 className={`flex flex-col items-center gap-1 rounded-lg px-2 py-1 transition ${
                   pathname === item.href
                     ? "bg-slate-900 text-white"
@@ -363,6 +383,14 @@ export default function AppLayout({
           </div>
         </nav>
       ) : null}
+
+      <main className="mx-auto w-full max-w-5xl px-4 py-6">
+        {loading ? (
+          <p className="text-sm text-slate-500">Carregando...</p>
+        ) : (
+          children
+        )}
+      </main>
     </div>
   );
 }
