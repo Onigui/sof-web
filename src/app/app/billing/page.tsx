@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import { apiFetch, SubscriptionRequiredError } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -28,6 +32,7 @@ type Invoice = {
   paid_at?: string;
   checkout_url?: string;
   provider?: string;
+  due_date?: string;
 };
 
 const formatMonthValue = (date: Date) =>
@@ -79,6 +84,7 @@ export default function BillingPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   const invoiceQuery = useMemo(() => `?month=${month}`, [month]);
   const paymentStatus = searchParams.get("payment");
@@ -220,6 +226,11 @@ export default function BillingPage() {
         body: JSON.stringify(payload),
       });
       setSuccess("Configurações atualizadas.");
+    } catch (err) {
+      if (err instanceof SubscriptionRequiredError) {
+        setShowSubscriptionModal(true);
+        return;
+      }
       await loadBilling();
     } catch (err) {
       if (err instanceof Error) {
@@ -251,6 +262,13 @@ export default function BillingPage() {
               provider: "mercadopago",
             }
           : prev,
+      );
+      setSuccess("Link de pagamento gerado.");
+    } catch (err) {
+      if (err instanceof SubscriptionRequiredError) {
+        setShowSubscriptionModal(true);
+        return;
+      }
         prev ? { ...prev, checkout_url: data.checkout_url } : prev,
       );
       setSuccess("Link de pagamento gerado.");
@@ -353,6 +371,12 @@ export default function BillingPage() {
                   {invoice.provider}
                 </span>
               ) : null}
+              {invoice.due_date ? (
+                <span className="text-xs text-slate-500">
+                  Vence em{" "}
+                  {new Date(invoice.due_date).toLocaleDateString("pt-BR")}
+                </span>
+              ) : null}
               {invoice.paid_at ? (
                 <span className="text-xs text-slate-500">
                   Pago em{" "}
@@ -360,6 +384,13 @@ export default function BillingPage() {
                 </span>
               ) : null}
             </div>
+            {invoice.status === "OPEN" && invoice.due_date ? (
+              <p className="text-xs font-semibold text-amber-700">
+                {new Date(invoice.due_date).getTime() < Date.now()
+                  ? "Vencida"
+                  : "Em aberto"}
+              </p>
+            ) : null}
             <div className="grid gap-3 sm:grid-cols-3 text-sm text-slate-600">
               <div>
                 <p className="text-xs text-slate-400">Mensalidade</p>
@@ -482,6 +513,34 @@ export default function BillingPage() {
           </form>
         </section>
       )}
+
+      {showSubscriptionModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Assinatura necessária
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Procure a gestão para ativar o plano.
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Link
+                href="/app/billing"
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
+              >
+                Ir para Faturamento
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowSubscriptionModal(false)}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <label className="text-xs font-medium text-slate-500" htmlFor="month">

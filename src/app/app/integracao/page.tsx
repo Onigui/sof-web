@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 
 import { apiFetch, SubscriptionRequiredError } from "@/lib/api";
+import { getUser, type SessionUser } from "@/lib/session";
+
+type IntegracaoPayload = {
+  proposta_id: string;
 import { getUser } from "@/lib/session";
 
 type IntegracaoPayload = {
@@ -57,6 +61,16 @@ export default function IntegracaoPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
+
+  useEffect(() => {
+    const user = getUser() as SessionUser | null;
+    if (user?.role === "OPERADOR") {
+      setError("Acesso restrito para integração.");
+    }
+    if (user?.subscription?.status === "SUSPENSA") {
+      setIsSuspended(true);
+    }
 
   const canSave = useMemo(
     () => Boolean(dataAverbacao && contrato && selected),
@@ -190,6 +204,13 @@ export default function IntegracaoPage() {
         </div>
       ) : null}
 
+      {isSuspended ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          Sua assinatura está suspensa. Procure a gestão para regularizar o
+          pagamento.
+        </div>
+      ) : null}
+
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="space-y-1">
           <label className="text-xs font-medium text-slate-500" htmlFor="id">
@@ -296,6 +317,15 @@ export default function IntegracaoPage() {
           />
           Veículo alienado
         </label>
+        {isSuspended ? null : (
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-70"
+          >
+            {saving ? "Integrando..." : "Integrar proposta"}
+          </button>
+        )}
         <button
           type="submit"
           disabled={saving}
