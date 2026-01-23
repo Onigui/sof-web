@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -26,6 +27,7 @@ type Invoice = {
   total?: number;
   paid_at?: string;
   checkout_url?: string;
+  provider?: string;
 };
 
 const formatMonthValue = (date: Date) =>
@@ -65,6 +67,7 @@ type BillingSettings = {
 
 export default function BillingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUserState] = useState<SessionUser | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [month, setMonth] = useState(() => formatMonthValue(new Date()));
@@ -75,6 +78,11 @@ export default function BillingPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
+
+  const invoiceQuery = useMemo(() => `?month=${month}`, [month]);
+  const paymentStatus = searchParams.get("payment");
+  const paymentInvoiceId = searchParams.get("invoice");
 
   const invoiceQuery = useMemo(() => `?month=${month}`, [month]);
 
@@ -166,6 +174,24 @@ export default function BillingPage() {
     loadInvoice();
   }, [invoiceQuery]);
 
+  useEffect(() => {
+    if (!paymentStatus) {
+      setPaymentNotice(null);
+      return;
+    }
+
+    if (paymentStatus === "success") {
+      setPaymentNotice("Pagamento enviado. Aguardando confirmação.");
+    } else if (paymentStatus === "failure") {
+      setPaymentNotice("Pagamento não concluído.");
+    } else if (paymentStatus === "pending") {
+      setPaymentNotice("Pagamento pendente.");
+    } else {
+      setPaymentNotice(null);
+    }
+  }, [paymentStatus]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     const user = getUser();
     if (user?.role !== "GESTAO") {
@@ -218,6 +244,13 @@ export default function BillingPage() {
         { method: "POST" },
       );
       setInvoice((prev) =>
+        prev
+          ? {
+              ...prev,
+              checkout_url: data.checkout_url,
+              provider: "mercadopago",
+            }
+          : prev,
         prev ? { ...prev, checkout_url: data.checkout_url } : prev,
       );
       setSuccess("Link de pagamento gerado.");
@@ -262,6 +295,28 @@ export default function BillingPage() {
         </div>
       </section>
 
+      {paymentNotice ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold text-slate-700">
+              {paymentNotice}
+            </p>
+            <button
+              type="button"
+              onClick={loadInvoice}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
+            >
+              Atualizar
+            </button>
+          </div>
+          {paymentInvoiceId ? (
+            <p className="mt-2 text-xs text-slate-400">
+              Invoice: {paymentInvoiceId}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <section className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
@@ -293,6 +348,11 @@ export default function BillingPage() {
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                 {invoice.status ?? "OPEN"}
               </span>
+              {invoice.provider ? (
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                  {invoice.provider}
+                </span>
+              ) : null}
               {invoice.paid_at ? (
                 <span className="text-xs text-slate-500">
                   Pago em{" "}
