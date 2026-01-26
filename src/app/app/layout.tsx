@@ -43,6 +43,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       return [
         { href: "/app/billing", label: "Billing" },
         { href: "/app/auditoria", label: "Auditoria" },
+        { href: "/app/admin", label: "Admin" },
       ];
     }
     if (user.role === "ANALISTA") {
