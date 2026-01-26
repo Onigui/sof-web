@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -143,6 +144,9 @@ export default function AnaliseDetalhePage() {
   const [documentosActionError, setDocumentosActionError] = useState<
     string | null
   >(null);
+  const [detranLoading, setDetranLoading] = useState(false);
+  const [detranMessage, setDetranMessage] = useState<string | null>(null);
+  const [detranError, setDetranError] = useState<string | null>(null);
 
   const normalizedPrecheck = useMemo(() => {
     if (!precheck) {
@@ -681,6 +685,28 @@ export default function AnalisePage() {
     }
   };
 
+  const handleDetranQuery = async () => {
+    if (!propostaId) return;
+    setDetranLoading(true);
+    setDetranError(null);
+    setDetranMessage(null);
+    try {
+      await apiFetch("/api/v1/detran/queries", {
+        method: "POST",
+        body: JSON.stringify({ proposta_id: propostaId }),
+      });
+      setDetranMessage("Consulta Detran criada.");
+    } catch (err) {
+      if (err instanceof Error) {
+        setDetranError(err.message);
+      } else {
+        setDetranError("Não foi possível consultar o Detran.");
+      }
+    } finally {
+      setDetranLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <header>
@@ -718,6 +744,45 @@ export default function AnalisePage() {
           </p>
         )}
       </section>
+
+      {isGestao || isAnalista ? (
+        <section className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-700">
+                Consultar Detran
+              </h2>
+              <p className="text-xs text-slate-500">
+                Abra uma nova consulta vinculada à proposta.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={handleDetranQuery}
+                disabled={detranLoading}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-70"
+              >
+                {detranLoading ? "Consultando..." : "Consultar Detran"}
+              </button>
+              <Link
+                href={`/app/detran?proposta_id=${propostaId}`}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
+              >
+                Ver consultas
+              </Link>
+            </div>
+          </div>
+          <div className="mt-3 space-y-1 text-sm">
+            {detranError ? (
+              <p className="text-rose-600">{detranError}</p>
+            ) : null}
+            {detranMessage ? (
+              <p className="text-emerald-600">{detranMessage}</p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       {isGestao ? (
         <section className="rounded-xl border border-slate-200 bg-white p-4">
