@@ -44,6 +44,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         { href: "/app/billing", label: "Billing" },
         { href: "/app/auditoria", label: "Auditoria" },
         { href: "/app/admin", label: "Admin" },
+        { href: "/app/backoffice/leads", label: "Backoffice" },
+      ];
+    }
+    if (user.role === "ANALISTA") {
+      return [
+        { href: "/app/auditoria", label: "Auditoria" },
+        { href: "/app/backoffice/leads", label: "Backoffice" },
+      ];
+    }
+    if (user.role === "LOJA") {
+      return [{ href: "/app/leads", label: "Leads" }];
+    }
+    return [];
       ];
     }
     if (user.role === "ANALISTA") {
