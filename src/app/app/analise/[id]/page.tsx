@@ -58,6 +58,20 @@ type Pendencia = {
   motivo?: string;
 };
 
+type Documento = {
+  id: string | number;
+  tipo?: string;
+  status?: string;
+  enviado_em?: string;
+  motivo_invalidez?: string;
+};
+
+type AutoValidateResponse = {
+  message?: string;
+  summary?: string;
+  resumo?: string;
+};
+
 const statusOptions = [
   "EM_ANALISE",
   "PENDENTE",
@@ -92,6 +106,7 @@ export default function AnaliseDetalhePage() {
   const [loadingPendencias, setLoadingPendencias] = useState(true);
   const [pendenciasError, setPendenciasError] = useState<string | null>(null);
   const [isGestao, setIsGestao] = useState(false);
+  const [isAnalista, setIsAnalista] = useState(false);
   const [operators, setOperators] = useState<OperatorOption[]>([]);
   const [loadingOperators, setLoadingOperators] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -111,6 +126,23 @@ export default function AnaliseDetalhePage() {
   const [precheck, setPrecheck] = useState<PrecheckPayload | null>(null);
   const [precheckError, setPrecheckError] = useState<string | null>(null);
   const [precheckLoading, setPrecheckLoading] = useState(false);
+  const [documentos, setDocumentos] = useState<Documento[]>([]);
+  const [loadingDocumentos, setLoadingDocumentos] = useState(true);
+  const [documentosError, setDocumentosError] = useState<string | null>(null);
+  const [docActionLoading, setDocActionLoading] = useState<
+    Record<string | number, boolean>
+  >({});
+  const [autoValidateLoading, setAutoValidateLoading] = useState(false);
+  const [autoValidateMessage, setAutoValidateMessage] = useState<string | null>(
+    null,
+  );
+  const [showInvalidModal, setShowInvalidModal] = useState(false);
+  const [invalidReason, setInvalidReason] = useState("");
+  const [selectedDocumento, setSelectedDocumento] =
+    useState<Documento | null>(null);
+  const [documentosActionError, setDocumentosActionError] = useState<
+    string | null
+  >(null);
 
   const normalizedPrecheck = useMemo(() => {
     if (!precheck) {
@@ -167,6 +199,7 @@ export default function AnaliseDetalhePage() {
   useEffect(() => {
     const user = getUser();
     setIsGestao(user?.role === "GESTAO");
+    setIsAnalista(user?.role === "ANALISTA");
   }, [propostaId]);
 
   const loadProposal = async () => {
@@ -227,6 +260,27 @@ export default function AnaliseDetalhePage() {
       }
     } finally {
       setLoadingPendencias(false);
+    }
+  };
+
+  const loadDocumentos = async () => {
+    if (!propostaId) return;
+    setLoadingDocumentos(true);
+    setDocumentosError(null);
+
+    try {
+      const data = await apiFetch<Documento[]>(
+        `/api/v1/propostas/${propostaId}/documentos`,
+      );
+      setDocumentos(data ?? []);
+    } catch (err) {
+      if (err instanceof Error) {
+        setDocumentosError(err.message);
+      } else {
+        setDocumentosError("Não foi possível carregar documentos.");
+      }
+    } finally {
+      setLoadingDocumentos(false);
     }
   };
 
@@ -459,6 +513,7 @@ export default function AnalisePage() {
     loadAudit();
     loadPendencias();
     loadPrecheck();
+    loadDocumentos();
   }, [propostaId]);
 
   useEffect(() => {
@@ -568,6 +623,61 @@ export default function AnalisePage() {
       }
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleValidateDocumento = async (
+    documento: Documento,
+    status: "VALIDO" | "INVALIDO",
+    motivo?: string,
+  ) => {
+    setDocumentosActionError(null);
+    setAutoValidateMessage(null);
+    setDocActionLoading((prev) => ({ ...prev, [documento.id]: true }));
+
+    try {
+      await apiFetch(`/api/v1/documentos/${documento.id}/validar`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status,
+          motivo: motivo?.trim() ? motivo : undefined,
+        }),
+      });
+      await loadDocumentos();
+    } catch (err) {
+      if (err instanceof Error) {
+        setDocumentosActionError(err.message);
+      } else {
+        setDocumentosActionError("Não foi possível validar o documento.");
+      }
+    } finally {
+      setDocActionLoading((prev) => ({ ...prev, [documento.id]: false }));
+    }
+  };
+
+  const handleAutoValidate = async () => {
+    if (!propostaId) return;
+    setAutoValidateLoading(true);
+    setDocumentosActionError(null);
+    setAutoValidateMessage(null);
+    try {
+      const data = await apiFetch<AutoValidateResponse>(
+        `/api/v1/propostas/${propostaId}/documentos/auto-validate`,
+        { method: "POST" },
+      );
+      const message = data?.message ?? data?.summary ?? data?.resumo;
+      setAutoValidateMessage(message ?? "Auto-validação concluída.");
+      await loadDocumentos();
+    } catch (err) {
+      if (err instanceof Error) {
+        setDocumentosActionError(err.message);
+      } else {
+        setDocumentosActionError(
+          "Não foi possível executar a auto-validação.",
+        );
+      }
+    } finally {
+      setAutoValidateLoading(false);
     }
   };
 
@@ -742,6 +852,105 @@ export default function AnalisePage() {
             <p className="text-sm text-slate-500">
               Pré-checagem indisponível.
             </p>
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700">Documentos</h2>
+            <p className="text-xs text-slate-500">
+              Valide documentos enviados para a proposta.
+            </p>
+          </div>
+          {isGestao || isAnalista ? (
+            <button
+              type="button"
+              onClick={handleAutoValidate}
+              disabled={autoValidateLoading}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-70"
+            >
+              {autoValidateLoading ? "Auto-validando..." : "Auto-validar"}
+            </button>
+          ) : null}
+        </div>
+        <div className="mt-4 space-y-3">
+          {documentosActionError ? (
+            <p className="text-sm text-rose-600">{documentosActionError}</p>
+          ) : null}
+          {autoValidateMessage ? (
+            <p className="text-sm text-emerald-600">{autoValidateMessage}</p>
+          ) : null}
+          {loadingDocumentos ? (
+            <p className="text-sm text-slate-500">
+              Carregando documentos...
+            </p>
+          ) : documentosError ? (
+            <p className="text-sm text-rose-600">{documentosError}</p>
+          ) : documentos.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              Nenhum documento encontrado.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {documentos.map((doc) => {
+                const isLoading = docActionLoading[doc.id] ?? false;
+                return (
+                  <li
+                    key={doc.id}
+                    className="rounded-lg border border-slate-100 bg-slate-50 p-3"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-slate-800">
+                          {doc.tipo ?? "Documento"}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Status: {doc.status ?? "—"}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Enviado em:{" "}
+                          {doc.enviado_em
+                            ? new Date(doc.enviado_em).toLocaleString("pt-BR")
+                            : "—"}
+                        </p>
+                        {doc.motivo_invalidez ? (
+                          <p className="text-xs text-rose-600">
+                            Motivo: {doc.motivo_invalidez}
+                          </p>
+                        ) : null}
+                      </div>
+                      {isGestao || isAnalista ? (
+                        <div className="flex flex-col gap-2 sm:items-end">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleValidateDocumento(doc, "VALIDO")
+                            }
+                            disabled={isLoading}
+                            className="rounded-lg border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700 disabled:opacity-70"
+                          >
+                            {isLoading ? "Salvando..." : "Validar"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedDocumento(doc);
+                              setShowInvalidModal(true);
+                            }}
+                            disabled={isLoading}
+                            className="rounded-lg border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-700 disabled:opacity-70"
+                          >
+                            Invalidar
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       </section>
@@ -1203,6 +1412,76 @@ export default function AnalisePage() {
                   className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-70"
                 >
                   {actionLoading ? "Salvando..." : "Ajustar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {showInvalidModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Invalidar documento
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Documento: {selectedDocumento?.tipo ?? "Selecionado"}
+            </p>
+            <form
+              className="mt-4 space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!selectedDocumento || !invalidReason.trim()) {
+                  setDocumentosActionError(
+                    "Informe o motivo para invalidar o documento.",
+                  );
+                  return;
+                }
+                handleValidateDocumento(
+                  selectedDocumento,
+                  "INVALIDO",
+                  invalidReason,
+                ).finally(() => {
+                  setShowInvalidModal(false);
+                  setInvalidReason("");
+                  setSelectedDocumento(null);
+                });
+              }}
+            >
+              <div className="space-y-1">
+                <label
+                  htmlFor="invalid-reason"
+                  className="text-xs font-medium text-slate-500"
+                >
+                  Motivo
+                </label>
+                <textarea
+                  id="invalid-reason"
+                  value={invalidReason}
+                  onChange={(event) => setInvalidReason(event.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  rows={3}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInvalidModal(false);
+                    setInvalidReason("");
+                    setSelectedDocumento(null);
+                  }}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Invalidar
                 </button>
               </div>
             </form>
