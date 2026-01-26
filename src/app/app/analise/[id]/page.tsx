@@ -30,6 +30,25 @@ type OperatorOption = {
   email?: string;
 };
 
+type PrecheckDoc = {
+  id?: string | number;
+  nome?: string;
+  name?: string;
+  label?: string;
+  descricao?: string;
+};
+
+type PrecheckPayload = {
+  errors?: Array<string | { message?: string }>;
+  warnings?: Array<string | { message?: string }>;
+  missing_fields?: string[];
+  missing_docs?: Array<string | PrecheckDoc>;
+  erros?: Array<string | { message?: string }>;
+  avisos?: Array<string | { message?: string }>;
+  campos_faltantes?: string[];
+  docs_faltantes?: Array<string | PrecheckDoc>;
+};
+
 type Pendencia = {
   id: string | number;
   status?: string;
@@ -89,6 +108,47 @@ export default function AnaliseDetalhePage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [precheck, setPrecheck] = useState<PrecheckPayload | null>(null);
+  const [precheckError, setPrecheckError] = useState<string | null>(null);
+  const [precheckLoading, setPrecheckLoading] = useState(false);
+
+  const normalizedPrecheck = useMemo(() => {
+    if (!precheck) {
+      return {
+        errors: [] as string[],
+        warnings: [] as string[],
+        missingFields: [] as string[],
+        missingDocs: [] as PrecheckDoc[],
+      };
+    }
+
+    const errorItems = precheck.errors ?? precheck.erros ?? [];
+    const warningItems = precheck.warnings ?? precheck.avisos ?? [];
+    const missingFields =
+      precheck.missing_fields ?? precheck.campos_faltantes ?? [];
+    const rawDocs = precheck.missing_docs ?? precheck.docs_faltantes ?? [];
+
+    const toMessages = (items: Array<string | { message?: string }>) =>
+      items
+        .map((item) => (typeof item === "string" ? item : item.message ?? ""))
+        .filter(Boolean);
+
+    const missingDocs = rawDocs
+      .map((doc, index) => {
+        if (typeof doc === "string") {
+          return { id: index, label: doc };
+        }
+        return doc;
+      })
+      .filter(Boolean) as PrecheckDoc[];
+
+    return {
+      errors: toMessages(errorItems),
+      warnings: toMessages(warningItems),
+      missingFields,
+      missingDocs,
+    };
+  }, [precheck]);
 export default function AnaliseDetalhePage() {
   const params = useParams();
   const propostaId = params?.id as string;
@@ -167,6 +227,26 @@ export default function AnaliseDetalhePage() {
       }
     } finally {
       setLoadingPendencias(false);
+    }
+  };
+
+  const loadPrecheck = async () => {
+    if (!propostaId) return;
+    setPrecheckLoading(true);
+    setPrecheckError(null);
+    try {
+      const data = await apiFetch<PrecheckPayload>(
+        `/api/v1/propostas/${propostaId}/precheck`,
+      );
+      setPrecheck(data);
+    } catch (err) {
+      if (err instanceof Error) {
+        setPrecheckError(err.message);
+      } else {
+        setPrecheckError("Não foi possível carregar a pré-checagem.");
+      }
+    } finally {
+      setPrecheckLoading(false);
     }
   };
 
@@ -378,6 +458,7 @@ export default function AnalisePage() {
     loadProposal();
     loadAudit();
     loadPendencias();
+    loadPrecheck();
   }, [propostaId]);
 
   useEffect(() => {
@@ -564,6 +645,106 @@ export default function AnalisePage() {
           ) : null}
         </section>
       ) : null}
+
+      <section className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700">
+              Pré-checagem
+            </h2>
+            <p className="text-xs text-slate-500">
+              Checklist de validações realizadas antes do envio.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={loadPrecheck}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700"
+          >
+            Atualizar
+          </button>
+        </div>
+        <div className="mt-4 space-y-3">
+          {precheckLoading ? (
+            <p className="text-sm text-slate-500">
+              Carregando pré-checagem...
+            </p>
+          ) : precheckError ? (
+            <p className="text-sm text-rose-600">{precheckError}</p>
+          ) : precheck ? (
+            <>
+              {normalizedPrecheck.errors.length > 0 ? (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
+                  <p className="text-xs font-semibold uppercase text-rose-700">
+                    Erros
+                  </p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-rose-700">
+                    {normalizedPrecheck.errors.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {normalizedPrecheck.warnings.length > 0 ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-xs font-semibold uppercase text-amber-700">
+                    Avisos
+                  </p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-700">
+                    {normalizedPrecheck.warnings.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {normalizedPrecheck.missingFields.length > 0 ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase text-slate-600">
+                    Campos faltantes
+                  </p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                    {normalizedPrecheck.missingFields.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {normalizedPrecheck.missingDocs.length > 0 ? (
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-xs font-semibold uppercase text-slate-600">
+                    Documentos faltantes
+                  </p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                    {normalizedPrecheck.missingDocs.map((doc, index) => (
+                      <li
+                        key={`${doc.id ?? index}-${doc.label ?? doc.nome ?? doc.name}`}
+                      >
+                        {doc.label ?? doc.nome ?? doc.name ?? `Documento ${index + 1}`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {normalizedPrecheck.errors.length === 0 &&
+              normalizedPrecheck.warnings.length === 0 &&
+              normalizedPrecheck.missingFields.length === 0 &&
+              normalizedPrecheck.missingDocs.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  Nenhuma pendência encontrada na pré-checagem.
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Pré-checagem indisponível.
+            </p>
+          )}
+        </div>
+      </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4">
         <h2 className="text-sm font-semibold text-slate-700">Pendências</h2>

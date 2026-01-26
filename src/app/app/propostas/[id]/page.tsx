@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { getToken, getUser } from "@/lib/session";
 import { getUser } from "@/lib/session";
 
 type AuditEntry = {
@@ -28,6 +29,25 @@ type OperatorOption = {
   nome?: string;
   name?: string;
   email?: string;
+};
+
+type PrecheckDoc = {
+  id?: string | number;
+  nome?: string;
+  name?: string;
+  label?: string;
+  descricao?: string;
+};
+
+type PrecheckPayload = {
+  errors?: Array<string | { message?: string }>;
+  warnings?: Array<string | { message?: string }>;
+  missing_fields?: string[];
+  missing_docs?: Array<string | PrecheckDoc>;
+  erros?: Array<string | { message?: string }>;
+  avisos?: Array<string | { message?: string }>;
+  campos_faltantes?: string[];
+  docs_faltantes?: Array<string | PrecheckDoc>;
 };
 
 const statusOptions = [
@@ -55,6 +75,7 @@ export default function PropostaDetalhePage() {
   const [proposalError, setProposalError] = useState<string | null>(null);
   const [loadingProposal, setLoadingProposal] = useState(true);
   const [isGestao, setIsGestao] = useState(false);
+  const [isOperador, setIsOperador] = useState(false);
   const [operators, setOperators] = useState<OperatorOption[]>([]);
   const [loadingOperators, setLoadingOperators] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -66,6 +87,51 @@ export default function PropostaDetalhePage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [precheck, setPrecheck] = useState<PrecheckPayload | null>(null);
+  const [precheckError, setPrecheckError] = useState<string | null>(null);
+  const [precheckLoading, setPrecheckLoading] = useState(false);
+  const [showPrecheckModal, setShowPrecheckModal] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendSuccess, setSendSuccess] = useState<string | null>(null);
+  const [sendLoading, setSendLoading] = useState(false);
+
+  const normalizedPrecheck = useMemo(() => {
+    if (!precheck) {
+      return {
+        errors: [] as string[],
+        warnings: [] as string[],
+        missingFields: [] as string[],
+        missingDocs: [] as PrecheckDoc[],
+      };
+    }
+
+    const errorItems = precheck.errors ?? precheck.erros ?? [];
+    const warningItems = precheck.warnings ?? precheck.avisos ?? [];
+    const missingFields =
+      precheck.missing_fields ?? precheck.campos_faltantes ?? [];
+    const rawDocs = precheck.missing_docs ?? precheck.docs_faltantes ?? [];
+
+    const toMessages = (items: Array<string | { message?: string }>) =>
+      items
+        .map((item) => (typeof item === "string" ? item : item.message ?? ""))
+        .filter(Boolean);
+
+    const missingDocs = rawDocs
+      .map((doc, index) => {
+        if (typeof doc === "string") {
+          return { id: index, label: doc };
+        }
+        return doc;
+      })
+      .filter(Boolean) as PrecheckDoc[];
+
+    return {
+      errors: toMessages(errorItems),
+      warnings: toMessages(warningItems),
+      missingFields,
+      missingDocs,
+    };
+  }, [precheck]);
   const [auditItems, setAuditItems] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +147,7 @@ export default function PropostaDetalhePage() {
   useEffect(() => {
     const user = getUser();
     setIsGestao(user?.role === "GESTAO");
+    setIsOperador(user?.role === "OPERADOR");
   }, [propostaId]);
 
   const loadProposal = async () => {
@@ -135,6 +202,29 @@ export default function PropostaDetalhePage() {
       setOperators([]);
     } finally {
       setLoadingOperators(false);
+    }
+  };
+
+  const loadPrecheck = async (showModal = false) => {
+    if (!propostaId) return;
+    setPrecheckLoading(true);
+    setPrecheckError(null);
+    try {
+      const data = await apiFetch<PrecheckPayload>(
+        `/api/v1/propostas/${propostaId}/precheck`,
+      );
+      setPrecheck(data);
+      if (showModal) {
+        setShowPrecheckModal(true);
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        setPrecheckError(err.message);
+      } else {
+        setPrecheckError("Não foi possível carregar a pré-checagem.");
+      }
+    } finally {
+      setPrecheckLoading(false);
     }
   };
 
@@ -221,6 +311,143 @@ export default function PropostaDetalhePage() {
     }
   };
 
+  const handleSend = async () => {
+    if (!propostaId) return;
+    setSendLoading(true);
+    setSendError(null);
+    setSendSuccess(null);
+
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+      const token = getToken();
+      const response = await fetch(
+        `${baseUrl}/api/v1/propostas/${propostaId}/enviar`,
+        {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        },
+      );
+
+      if (response.status === 422) {
+        const payload = (await response.json()) as PrecheckPayload;
+        setPrecheck(payload);
+        setShowPrecheckModal(true);
+        return;
+      }
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Não foi possível enviar a proposta.");
+      }
+
+      setSendSuccess("Proposta enviada para análise.");
+      await Promise.all([loadProposal(), loadAudit()]);
+    } catch (err) {
+      if (err instanceof Error) {
+        setSendError(err.message);
+      } else {
+        setSendError("Não foi possível enviar a proposta.");
+      }
+    } finally {
+      setSendLoading(false);
+    }
+  };
+
+  const renderPrecheckContent = (dense = false) => {
+    if (precheckLoading) {
+      return (
+        <p className="text-sm text-slate-500">Carregando pré-checagem...</p>
+      );
+    }
+
+    if (precheckError) {
+      return <p className="text-sm text-rose-600">{precheckError}</p>;
+    }
+
+    if (
+      normalizedPrecheck.errors.length === 0 &&
+      normalizedPrecheck.warnings.length === 0 &&
+      normalizedPrecheck.missingFields.length === 0 &&
+      normalizedPrecheck.missingDocs.length === 0
+    ) {
+      return (
+        <p className="text-sm text-slate-500">
+          Nenhuma pendência encontrada na pré-checagem.
+        </p>
+      );
+    }
+
+    return (
+      <div className={dense ? "space-y-3" : "space-y-4"}>
+        {normalizedPrecheck.errors.length > 0 ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
+            <p className="text-xs font-semibold uppercase text-rose-700">
+              Erros
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-rose-700">
+              {normalizedPrecheck.errors.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {normalizedPrecheck.warnings.length > 0 ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-xs font-semibold uppercase text-amber-700">
+              Avisos
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-700">
+              {normalizedPrecheck.warnings.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {normalizedPrecheck.missingFields.length > 0 ? (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-semibold uppercase text-slate-600">
+              Campos faltantes
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+              {normalizedPrecheck.missingFields.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {normalizedPrecheck.missingDocs.length > 0 ? (
+          <div className="rounded-lg border border-slate-200 bg-white p-3">
+            <p className="text-xs font-semibold uppercase text-slate-600">
+              Documentos faltantes
+            </p>
+            <ul className="mt-2 space-y-2 text-sm text-slate-600">
+              {normalizedPrecheck.missingDocs.map((doc, index) => (
+                <li
+                  key={`${doc.id ?? index}-${doc.label ?? doc.nome ?? doc.name}`}
+                  className="flex flex-col gap-2 rounded-lg border border-slate-200 p-2"
+                >
+                  <span className="text-sm font-semibold text-slate-700">
+                    {doc.label ?? doc.nome ?? doc.name ?? `Documento ${index + 1}`}
+                  </span>
+                  <label className="text-xs text-slate-500">
+                    Upload rápido
+                    <input
+                      type="file"
+                      className="mt-1 block w-full text-xs"
+                    />
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <header>
@@ -258,6 +485,47 @@ export default function PropostaDetalhePage() {
           </p>
         )}
       </section>
+
+      {isOperador ? (
+        <section className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-700">
+                Pré-checagem
+              </h2>
+              <p className="text-xs text-slate-500">
+                Valide a proposta antes de enviar para análise.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => loadPrecheck(false)}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
+              >
+                Pré-checar
+              </button>
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={sendLoading}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-70"
+              >
+                {sendLoading ? "Enviando..." : "Enviar para análise"}
+              </button>
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            {sendError ? (
+              <p className="text-sm text-rose-600">{sendError}</p>
+            ) : null}
+            {sendSuccess ? (
+              <p className="text-sm text-emerald-600">{sendSuccess}</p>
+            ) : null}
+            {precheck ? renderPrecheckContent() : null}
+          </div>
+        </section>
+      ) : null}
 
       {isGestao ? (
         <section className="rounded-xl border border-slate-200 bg-white p-4">
@@ -806,6 +1074,31 @@ export default function PropostaDetalhePage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {showPrecheckModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-lg">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Pré-checagem bloqueou o envio
+              </h2>
+              <p className="text-sm text-slate-600">
+                Ajuste os pontos abaixo antes de enviar para análise.
+              </p>
+            </div>
+            <div className="mt-4">{renderPrecheckContent(true)}</div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowPrecheckModal(false)}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Entendi
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
