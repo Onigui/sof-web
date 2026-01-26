@@ -20,4 +20,8 @@ export default function AppHomePage() {
       Selecione uma opção no menu para continuar.
     </div>
   );
+import { redirect } from "next/navigation";
+
+export default function AppIndex() {
+  redirect("/app/notificacoes");
 }
