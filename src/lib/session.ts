@@ -17,11 +17,6 @@ export type SessionUser = {
 };
 
 export const getToken = (): string | null => {
-  if (typeof window === "undefined") return null;
-  role?: "OPERADOR" | "ANALISTA" | "GESTAO" | string;
-};
-
-export const getToken = (): string | null => {
   if (typeof window === "undefined") {
     return null;
   }
@@ -30,7 +25,6 @@ export const getToken = (): string | null => {
 };
 
 export const setToken = (token: string) => {
-  if (typeof window === "undefined") return;
   if (typeof window === "undefined") {
     return;
   }
@@ -39,7 +33,6 @@ export const setToken = (token: string) => {
 };
 
 export const clearToken = () => {
-  if (typeof window === "undefined") return;
   if (typeof window === "undefined") {
     return;
   }
@@ -48,9 +41,6 @@ export const clearToken = () => {
 };
 
 export const getUser = (): SessionUser | null => {
-  if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(USER_KEY);
-  if (!raw) return null;
   if (typeof window === "undefined") {
     return null;
   }
@@ -68,7 +58,6 @@ export const getUser = (): SessionUser | null => {
 };
 
 export const setUser = (user: SessionUser) => {
-  if (typeof window === "undefined") return;
   if (typeof window === "undefined") {
     return;
   }
@@ -77,7 +66,6 @@ export const setUser = (user: SessionUser) => {
 };
 
 export const clearUser = () => {
-  if (typeof window === "undefined") return;
   if (typeof window === "undefined") {
     return;
   }

@@ -19,55 +19,6 @@ type InvoiceSummary = {
   due_date?: string;
 };
 
-const getTrialDaysLeft = (trialEndsAt?: string) => {
-  if (!trialEndsAt) return null;
-  const end = new Date(trialEndsAt);
-  if (Number.isNaN(end.getTime())) return null;
-  const today = new Date();
-  const todayStart = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
-  const diffMs = end.getTime() - todayStart.getTime();
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-};
-
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [user, setUserState] = useState<SessionUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [invoiceBanner, setInvoiceBanner] = useState<InvoiceSummary | null>(null);
-  const navItems = useMemo(() => {
-    if (!user?.role) return [];
-    if (user.role === "GESTAO") {
-      return [
-        { href: "/app/billing", label: "Billing" },
-        { href: "/app/auditoria", label: "Auditoria" },
-        { href: "/app/admin", label: "Admin" },
-        { href: "/app/backoffice/leads", label: "Backoffice" },
-      ];
-    }
-    if (user.role === "ANALISTA") {
-      return [
-        { href: "/app/auditoria", label: "Auditoria" },
-        { href: "/app/backoffice/leads", label: "Backoffice" },
-      ];
-    }
-    if (user.role === "LOJA") {
-      return [{ href: "/app/leads", label: "Leads" }];
-    }
-    return [];
-      ];
-    }
-    if (user.role === "ANALISTA") {
-      return [{ href: "/app/auditoria", label: "Auditoria" }];
-    }
-    return [];
-
-  useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      setLoading(false);
 type NavItem = {
   label: string;
   href: string;
@@ -77,6 +28,7 @@ const roleLabels: Record<string, string> = {
   OPERADOR: "Operador",
   ANALISTA: "Analista",
   GESTAO: "Gestão",
+  LOJA: "Loja",
 };
 
 const navByRole: Record<string, NavItem[]> = {
@@ -101,6 +53,21 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Config", href: "/app/config" },
     { label: "Notificações", href: "/app/notificacoes" },
   ],
+  LOJA: [{ label: "Leads", href: "/app/leads" }],
+};
+
+const getTrialDaysLeft = (trialEndsAt?: string) => {
+  if (!trialEndsAt) return null;
+  const end = new Date(trialEndsAt);
+  if (Number.isNaN(end.getTime())) return null;
+  const today = new Date();
+  const todayStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const diffMs = end.getTime() - todayStart.getTime();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 };
 
 export default function AppLayout({
@@ -112,8 +79,14 @@ export default function AppLayout({
   const pathname = usePathname();
   const [user, setUserState] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [invoiceBanner, setInvoiceBanner] = useState<InvoiceSummary | null>(
+    null,
+  );
 
   const navItems = useMemo(() => {
+    if (user?.role === "LOJA") {
+      return navByRole.LOJA;
+    }
     if (user?.role && navByRole[user.role]) {
       return navByRole[user.role];
     }
@@ -142,9 +115,10 @@ export default function AppLayout({
       })
       .catch(() => {
         clearSession();
+        router.replace("/login");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (!user || user.role !== "GESTAO") {
@@ -154,29 +128,12 @@ export default function AppLayout({
 
     const now = new Date();
     const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const storageKey = `sof.billing.invoice.${monthKey}`;
-
-    if (typeof window !== "undefined") {
-      const cached = window.sessionStorage.getItem(storageKey);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached) as InvoiceSummary;
-          setInvoiceBanner(parsed);
-          return;
-        } catch {
-          window.sessionStorage.removeItem(storageKey);
-        }
-      }
-    }
 
     apiFetch<InvoiceSummary[]>(`/api/v1/billing/invoices?month=${monthKey}`)
       .then((data) => {
-        const invoice = data?.[0] ?? null;
+        const invoice = Array.isArray(data) ? data[0] : null;
         if (invoice) {
           setInvoiceBanner(invoice);
-          if (typeof window !== "undefined") {
-            window.sessionStorage.setItem(storageKey, JSON.stringify(invoice));
-          }
         }
       })
       .catch(() => null);
@@ -185,10 +142,6 @@ export default function AppLayout({
   const banner = useMemo(() => {
     const subscription = user?.subscription;
     if (!subscription) return null;
-    const allowedRoles = ["ANALISTA", "GESTAO", "OPERADOR"];
-    if (user?.role && !allowedRoles.includes(user.role)) {
-      return null;
-    }
 
     const daysLeft = getTrialDaysLeft(subscription.trial_ends_at);
     const isTrial = subscription.status === "TRIAL";
@@ -197,7 +150,7 @@ export default function AppLayout({
 
     if (isSuspended || isTrialExpired) {
       return {
-        tone: "danger",
+        tone: "danger" as const,
         message:
           "Sua assinatura está suspensa ou o trial expirou. Procure a gestão para ativar o plano.",
         cta: "/app/billing",
@@ -207,7 +160,7 @@ export default function AppLayout({
 
     if (isTrial && daysLeft !== null && daysLeft <= 3) {
       return {
-        tone: "warning",
+        tone: "warning" as const,
         message: `Seu trial termina em ${daysLeft} dia(s).`,
       };
     }
@@ -229,8 +182,27 @@ export default function AppLayout({
     };
   }, [invoiceBanner, user]);
 
+  const handleLogout = async () => {
+    try {
+      await apiFetch("/api/v1/auth/logout", { method: "POST" });
+    } catch {
+      // best-effort logout
+    } finally {
+      clearSession();
+      router.replace("/login");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
+        Carregando...
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 pb-20 md:pb-0">
       {banner ? (
         <div
           className={`px-4 py-3 text-sm font-semibold ${
@@ -267,53 +239,13 @@ export default function AppLayout({
         </div>
       ) : null}
 
-      {navItems.length > 0 ? (
-        <nav className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-5xl flex-wrap gap-2 px-4 py-3 text-sm font-semibold text-slate-600">
-          {banner.message}
-        </div>
-      ) : null}
-
-      <main className="mx-auto w-full max-w-5xl px-4 py-6">
-        {loading ? (
-          <p className="text-sm text-slate-500">Carregando...</p>
-        ) : (
-          children
-        )}
-      </main>
-        router.replace("/login");
-      })
-      .finally(() => setLoading(false));
-  }, [router]);
-
-  const handleLogout = async () => {
-    try {
-      await apiFetch("/api/v1/auth/logout", { method: "POST" });
-    } catch {
-      // best-effort logout
-    } finally {
-      clearSession();
-      router.replace("/login");
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
-        Carregando...
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
           <div>
             <p className="text-sm font-semibold text-slate-900">SOF</p>
             <p className="text-xs text-slate-500">Portal Operacional</p>
           </div>
-          <div className="flex flex-1 flex-wrap items-center justify-end gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {user ? (
               <div className="text-right text-xs text-slate-600">
                 <p className="font-medium text-slate-800">{user.name}</p>
@@ -328,28 +260,11 @@ export default function AppLayout({
               Sair
             </button>
           </div>
-          {user?.role !== "OPERADOR" ? (
-            <nav className="flex w-full flex-wrap gap-2 text-xs font-semibold text-slate-600 md:hidden">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-full px-3 py-1.5 transition ${
-                    pathname === item.href
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-100"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          ) : null}
         </div>
       </header>
 
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-6">
-        {user?.role !== "OPERADOR" ? (
+        {user?.role !== "OPERADOR" && user?.role !== "LOJA" ? (
           <aside className="hidden w-56 flex-shrink-0 rounded-2xl border border-slate-200 bg-white p-4 md:block">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Navegação
@@ -377,14 +292,13 @@ export default function AppLayout({
         </main>
       </div>
 
-      {user?.role === "OPERADOR" ? (
+      {user?.role === "OPERADOR" || user?.role === "LOJA" ? (
         <nav className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white px-4 py-2 md:hidden">
           <div className="flex items-center justify-around text-xs font-semibold text-slate-600">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-full bg-slate-100 px-3 py-1 hover:bg-slate-200"
                 className={`flex flex-col items-center gap-1 rounded-lg px-2 py-1 transition ${
                   pathname === item.href
                     ? "bg-slate-900 text-white"
@@ -397,14 +311,6 @@ export default function AppLayout({
           </div>
         </nav>
       ) : null}
-
-      <main className="mx-auto w-full max-w-5xl px-4 py-6">
-        {loading ? (
-          <p className="text-sm text-slate-500">Carregando...</p>
-        ) : (
-          children
-        )}
-      </main>
     </div>
   );
 }

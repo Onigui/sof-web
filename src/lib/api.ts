@@ -15,11 +15,18 @@ export class SubscriptionRequiredError extends Error {
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
+if (!baseUrl) {
+  console.warn("NEXT_PUBLIC_API_BASE_URL is not set.");
+}
+
 const parseSubscriptionMessage = async (response: Response) => {
   const contentType = response.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
     try {
-      const data = (await response.json()) as { error?: string; message?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
       if (data.error === "subscription_required") {
         return data.message ?? "Assinatura necessária.";
       }
@@ -37,11 +44,19 @@ const parseSubscriptionMessage = async (response: Response) => {
   }
 };
 
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+const unwrapPayload = <T>(json: unknown): T => {
+  if (json !== null && typeof json === "object") {
+    const record = json as Record<string, unknown>;
+    if ("data" in record) {
+      return record.data as T;
+    }
+    if ("user" in record && Object.keys(record).length === 1) {
+      return record.user as T;
+    }
+  }
 
-if (!baseUrl) {
-  console.warn("NEXT_PUBLIC_API_BASE_URL is not set.");
-}
+  return json as T;
+};
 
 export const apiFetch = async <T>(
   path: string,
@@ -62,11 +77,6 @@ export const apiFetch = async <T>(
   }
 
   const response = await fetch(`${baseUrl}${path}`, {
-  if (!headers.has("Content-Type") && options.body) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  const response = await fetch(`${baseUrl ?? ""}${path}`, {
     ...options,
     headers,
   });
@@ -89,7 +99,8 @@ export const apiFetch = async <T>(
     return {} as T;
   }
 
-  return (await response.json()) as T;
+  const json = await response.json();
+  return unwrapPayload<T>(json);
 };
 
 export const apiDownload = async (
@@ -103,7 +114,7 @@ export const apiDownload = async (
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${baseUrl ?? ""}${path}`, {
+  const response = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers,
   });
