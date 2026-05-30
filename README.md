@@ -37,6 +37,12 @@ Abra [http://localhost:3000](http://localhost:3000).
 | gestao@casa-senior.dev | Gestão | password |
 | loja@casa-senior.dev | Loja | password |
 
+## Publicar na internet (sem PC local)
+
+Guia completo: **[docs/DEPLOY.md](docs/DEPLOY.md)** — Vercel (frontend) + Railway (API), conectando direto ao GitHub.
+
+Resumo: importe `sof-web` na Vercel e `sof-api` no Railway; configure `NEXT_PUBLIC_API_BASE_URL` e `FRONTEND_URL`.
+
 ## Scripts
 
 - `npm run dev` — servidor de desenvolvimento
