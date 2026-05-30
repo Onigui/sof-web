@@ -38,25 +38,19 @@ O restante deste guia usa **Render + Vercel**, sem Railway.
 
 > Banco Free do Render expira após **90 dias** se não atualizar o plano — ok para homologação.
 
-### 1.2 Web Service (API Laravel)
+### 1.2 Web Service (API Laravel) — obrigatório **Docker**
 
-1. **New +** → **Web Service** → conecte `Onigui/sof-api`
-2. **Environment**: Native (PHP) se disponível, ou **Docker** se o build nativo falhar
-3. Plano **Free**
+Se o log mostrar `Using Node.js` e `composer: command not found`, o Render está no runtime errado.
 
-**Build Command** (ajuste se o painel já detectar Laravel):
+1. **New +** → **Web Service** → `Onigui/sof-api`
+2. **Environment: Docker** (não Node / Native)
+3. **Dockerfile Path:** `Dockerfile`
+4. **Remova** Build Command e Start Command manuais (vazios)
+5. Plano **Free**
 
-```bash
-composer update --no-interaction --prefer-dist --optimize-autoloader --no-scripts && composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts && npm ci && npm run build && php artisan config:cache && php artisan route:cache && php artisan view:cache
-```
+O repo precisa do `Dockerfile` na raiz (veja branch `cursor/fix-railway-composer-945d` ou adicione pelo GitHub).
 
-> O `composer update` corrige o erro do `composer.lock` desatualizado (mercadopago / maatwebsite).
-
-**Start Command**:
-
-```bash
-php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
-```
+Guia detalhado: `sof-api/docs/DEPLOY-RENDER.md`
 
 ### 1.3 Variáveis de ambiente (Render → Environment)
 
