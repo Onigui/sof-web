@@ -39,9 +39,9 @@ Abra [http://localhost:3000](http://localhost:3000).
 
 ## Publicar na internet (sem PC local)
 
-Guia completo: **[docs/DEPLOY.md](docs/DEPLOY.md)** — Vercel (frontend) + Railway (API), conectando direto ao GitHub.
+Guia completo: **[docs/DEPLOY.md](docs/DEPLOY.md)** — **Vercel** (portal) + **Render** (API; substituto do Railway quando o trial expira).
 
-Resumo: importe `sof-web` na Vercel e `sof-api` no Railway; configure `NEXT_PUBLIC_API_BASE_URL` e `FRONTEND_URL`.
+Resumo: importe `sof-web` na Vercel e `sof-api` no Render; configure `NEXT_PUBLIC_API_BASE_URL` e `FRONTEND_URL`.
 
 ## Scripts
 

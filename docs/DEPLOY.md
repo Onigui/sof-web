@@ -1,130 +1,147 @@
 # Publicar o SOF na internet (sem instalar no seu PC)
 
-Você só precisa de conta no **GitHub** (onde já estão os repositórios), **Vercel** (frontend) e **Railway** (API). Cada `git push` pode publicar automaticamente.
+Você só precisa de conta no **GitHub**, **Vercel** (portal) e um host para a **API Laravel**.
 
 ## Visão geral
 
-| Parte | Repositório | Onde hospedar | URL exemplo |
-|-------|-------------|---------------|-------------|
-| Portal (Next.js) | `Onigui/sof-web` | [Vercel](https://vercel.com) | `https://sof-web.vercel.app` |
-| API (Laravel) | `Onigui/sof-api` | [Railway](https://railway.app) | `https://sof-api.up.railway.app` |
+| Parte | Repositório | Onde hospedar | Custo típico |
+|-------|-------------|---------------|--------------|
+| Portal (Next.js) | `Onigui/sof-web` | [Vercel](https://vercel.com) | Hobby grátis para testes |
+| API (Laravel) | `Onigui/sof-api` | **Render** (recomendado se Railway expirou) | Plano Free (com limites) |
 
-O frontend chama a API pela variável `NEXT_PUBLIC_API_BASE_URL` (sem `/api` no final).
+O frontend usa `NEXT_PUBLIC_API_BASE_URL` = URL da API **sem** `/api` no final.
 
 ---
 
-## Passo 1 — API no Railway (recomendado)
+## Railway — trial expirou?
 
-1. Acesse https://railway.app e entre com **GitHub**.
-2. **New Project** → **Deploy from GitHub repo** → escolha `Onigui/sof-api`.
-3. No mesmo projeto, **Add service** → **Database** → **PostgreSQL** (grátis no trial).
-4. No serviço da API, aba **Variables**, configure:
+Se aparecer *"Your trial has expired. Please select a plan to continue using Railway"*:
+
+| Opção | Quando faz sentido |
+|--------|-------------------|
+| **Assinar Railway** (Hobby ~US$ 5/mês) | Quer manter o que já configurou, sem mudar nada |
+| **Migrar para Render** (abaixo) | Quer continuar **sem pagar** para testes |
+| **Fly.io / VPS** | Mais controle; costuma exigir cartão ou configuração manual |
+
+O restante deste guia usa **Render + Vercel**, sem Railway.
+
+---
+
+## Passo 1 — API no Render (grátis para testes)
+
+### 1.1 Banco PostgreSQL
+
+1. https://dashboard.render.com → login com **GitHub**
+2. **New +** → **PostgreSQL**
+3. Nome: `sof-db` → plano **Free**
+4. Crie e copie a **Internal Database URL** (ou External, se pedir)
+
+> Banco Free do Render expira após **90 dias** se não atualizar o plano — ok para homologação.
+
+### 1.2 Web Service (API Laravel)
+
+1. **New +** → **Web Service** → conecte `Onigui/sof-api`
+2. **Environment**: Native (PHP) se disponível, ou **Docker** se o build nativo falhar
+3. Plano **Free**
+
+**Build Command** (ajuste se o painel já detectar Laravel):
+
+```bash
+composer update --no-interaction --prefer-dist --optimize-autoloader --no-scripts && composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts && npm ci && npm run build && php artisan config:cache && php artisan route:cache && php artisan view:cache
+```
+
+> O `composer update` corrige o erro do `composer.lock` desatualizado (mercadopago / maatwebsite).
+
+**Start Command**:
+
+```bash
+php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
+```
+
+### 1.3 Variáveis de ambiente (Render → Environment)
 
 | Variável | Valor |
 |----------|--------|
 | `APP_ENV` | `production` |
 | `APP_DEBUG` | `false` |
-| `APP_KEY` | gere com `php artisan key:generate --show` (uma vez, no Actions ou local) |
-| `APP_URL` | URL pública da API (Railway gera em **Settings → Networking → Generate Domain**) |
-| `FRONTEND_URL` | URL do Vercel (passo 2) — ex.: `https://seu-app.vercel.app` |
+| `APP_KEY` | gere no Codespace: `php artisan key:generate --show` |
+| `APP_URL` | `https://SEU-SERVICO.onrender.com` |
+| `FRONTEND_URL` | URL do Vercel (passo 2) |
 | `DB_CONNECTION` | `pgsql` |
-| `DATABASE_URL` | copie da aba **Connect** do PostgreSQL (URL interna) |
+| `DATABASE_URL` | URL do Postgres Render |
 | `SESSION_DRIVER` | `database` |
-| `QUEUE_CONNECTION` | `database` |
+| `QUEUE_CONNECTION` | `sync` |
 | `CACHE_STORE` | `database` |
 
-5. **Settings → Deploy** → confira o comando de start (o arquivo `railway.toml` do repo já sugere migrate + servidor).
-6. **Generate Domain** e anote a URL — será a base da API.
+### 1.4 Após o deploy
 
-**Seed (usuários de teste):** no Railway, abra o serviço → **Settings** → rode um deploy one-off ou use o terminal:
+No **Shell** do serviço Render (ou one-off job):
 
 ```bash
-php artisan migrate --force
 php artisan db:seed --force
 ```
 
-Usuários após o seed: `operador@casa-senior.dev` / `password` (e analista, gestão, loja).
+Teste: `https://SEU-SERVICO.onrender.com/up`
 
-> Use a branch `cursor/saas-ready-945d` na API se `main` ainda estiver com merge quebrado — ou mescle essa PR antes do deploy.
+**Limites do Free:** o serviço **dorme** após ~15 min sem acesso; o primeiro acesso pode levar ~1 minuto (cold start).
 
 ---
 
-## Passo 2 — Frontend no Vercel (mais simples que Actions)
+## Passo 2 — Portal no Vercel
 
-1. https://vercel.com → **Add New** → **Project** → importe `Onigui/sof-web`.
-2. Framework: **Next.js** (detectado automaticamente).
-3. **Environment Variables**:
+1. https://vercel.com → importe `Onigui/sof-web`
+2. Variável:
 
 | Nome | Valor |
 |------|--------|
-| `NEXT_PUBLIC_API_BASE_URL` | URL da API no Railway, ex.: `https://sof-api-production.up.railway.app` |
+| `NEXT_PUBLIC_API_BASE_URL` | `https://SEU-SERVICO.onrender.com` |
 
-4. **Deploy**. A cada push em `main`, o Vercel publica de novo.
-
-Abra a URL do Vercel e faça login com um usuário do seed.
+3. Deploy → abra a URL → login: `operador@casa-senior.dev` / `password` (após seed)
 
 ---
 
-## Passo 3 (opcional) — Deploy do front via GitHub Actions
+## Passo 3 — CORS
 
-Se preferir publicar pelo Actions em vez do painel da Vercel:
+Na API, `FRONTEND_URL` deve ser **exatamente** a URL do Vercel (`https://...`, sem barra no final).
 
-1. No Vercel: **Project Settings** → copie **Org ID** e **Project ID**.
-2. Crie um token: https://vercel.com/account/tokens
-3. No GitHub `sof-web` → **Settings** → **Secrets and variables** → **Actions**:
-
-| Secret | Conteúdo |
-|--------|----------|
-| `VERCEL_TOKEN` | token da Vercel |
-| `VERCEL_ORG_ID` | org id |
-| `VERCEL_PROJECT_ID` | project id |
-
-4. Em **Variables** (repositório):
-
-| Variable | Conteúdo |
-|----------|----------|
-| `NEXT_PUBLIC_API_BASE_URL` | URL da API Railway |
-
-5. Push em `main` ou rode manualmente: **Actions** → **Deploy — Vercel (SOF Web)** → **Run workflow**.
+Arquivo `config/cors.php` no `sof-api` usa essa variável.
 
 ---
 
-## Passo 4 (opcional) — API via GitHub Actions no Railway
+## Corrigir composer.lock no GitHub (recomendado)
 
-1. Railway → **Account Settings** → **Tokens** → crie um token.
-2. No serviço da API, **Settings** → copie o **Service ID** e **Environment ID** (ou use deploy só pelo GitHub connect — mais fácil).
-3. GitHub `sof-api` → secrets:
+No `sof-api`, use **Codespaces** ou PC:
 
-| Secret | Uso |
-|--------|-----|
-| `RAILWAY_TOKEN` | token Railway |
+```bash
+composer update mercadopago/dx-php maatwebsite/excel --no-interaction
+git add composer.lock
+git commit -m "fix: sincronizar composer.lock"
+git push
+```
 
-O workflow `deploy-railway.yml` dispara deploy após push em `main` (se o secret existir).
-
-**Alternativa mais fácil:** só conectar o repo no Railway (passo 1) — não precisa de Actions na API.
-
----
-
-## CORS
-
-A API usa `FRONTEND_URL` no `.env` (veja `config/cors.php`). Deve ser **exatamente** a URL do Vercel, com `https://`, sem barra no final.
+Ou adicione `railpack.json` / variável de build com `composer update` (ver `docs/FIX-RAILWAY-COMPOSER.md` no repo da API).
 
 ---
 
-## Checklist rápido
+## Checklist
 
-- [ ] API no ar (`GET https://sua-api.up.railway.app/up` retorna OK)
-- [ ] PostgreSQL ligado e migrations rodadas
-- [ ] Seed executado
-- [ ] Vercel com `NEXT_PUBLIC_API_BASE_URL` apontando para a API
-- [ ] `FRONTEND_URL` na API = URL do Vercel
-- [ ] Login no portal com `operador@casa-senior.dev` / `password`
+- [ ] Postgres Render criado
+- [ ] Web Service Render **Live**
+- [ ] `GET .../up` OK
+- [ ] `migrate` + `db:seed` executados
+- [ ] Vercel com `NEXT_PUBLIC_API_BASE_URL`
+- [ ] `FRONTEND_URL` = URL Vercel
+- [ ] Login no portal funciona
 
 ---
 
-## Custos
+## Comparativo rápido
 
-- **Vercel:** plano hobby costuma bastar para testes.
-- **Railway:** trial/créditos; PostgreSQL + web service consomem crédito mensal.
+| Plataforma | API Laravel | Grátis longo prazo | Observação |
+|------------|-------------|--------------------|------------|
+| **Render** | Sim | Sim (com limites) | Melhor substituto do Railway para testes |
+| **Railway** | Sim | Trial acabou | Pago após trial |
+| **Vercel** | Não (só front) | Sim | Use só para `sof-web` |
+| **Fly.io** | Sim | Cartão / créditos | Alternativa técnica |
 
-Para produção da financeira, depois vale domínio próprio (`app.suaempresa.com.br`) nas duas plataformas.
+Para **produção** da financeira, planeje plano pago (Render Starter, Railway Hobby, ou VPS) com domínio próprio.
