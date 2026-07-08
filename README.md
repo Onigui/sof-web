@@ -2,12 +2,14 @@
 
 Frontend Next.js do SaaS SOF (financeira). Conecta-se à API Laravel em [sof-api](https://github.com/Onigui/sof-api).
 
-## Pré-requisitos
+## Só navegador (sem PC)
 
-- Node.js 20+
-- API `sof-api` rodando (veja README do repositório da API)
+- **Estratégia:** [docs/ESTRATEGIA.md](docs/ESTRATEGIA.md) — por que manter como site e não extensão/plugin
+- **Deploy:** [docs/DEPLOY-SO-BROWSER.md](docs/DEPLOY-SO-BROWSER.md) — Vercel + Render passo a passo
+- **Arquivos da API para copiar no GitHub:** pasta [deploy/sof-api/](deploy/sof-api/)
+- **Editar no navegador:** GitHub Codespaces (botão Code → Codespaces neste repo)
 
-## Configuração
+## Configuração local (opcional)
 
 ```bash
 cp .env.example .env.local
