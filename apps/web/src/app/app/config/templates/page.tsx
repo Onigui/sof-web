@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { getUser } from "@/lib/session";
 
@@ -16,15 +16,35 @@ type TemplatesState = {
   pendencia: string;
 };
 
+const readStoredTemplates = (storageKey: string): TemplatesState => {
+  if (typeof window === "undefined") {
+    return defaultTemplates;
+  }
+
+  const stored = window.localStorage.getItem(storageKey);
+  if (!stored) {
+    return defaultTemplates;
+  }
+
+  try {
+    const parsed = JSON.parse(stored) as TemplatesState;
+    return {
+      dut: parsed.dut ?? defaultTemplates.dut,
+      pendencia: parsed.pendencia ?? defaultTemplates.pendencia,
+    };
+  } catch {
+    return defaultTemplates;
+  }
+};
+
 export default function TemplatesPage() {
   const router = useRouter();
   const user = getUser();
-  const storageKey = useMemo(() => {
-    const empresaId = (user as { empresa_id?: string | number })?.empresa_id;
-    return `sof.templates.${empresaId ?? "default"}`;
-  }, [user]);
+  const storageKey = `sof.templates.${(user as { empresa_id?: string | number })?.empresa_id ?? "default"}`;
 
-  const [templates, setTemplates] = useState<TemplatesState>(defaultTemplates);
+  const [templates, setTemplates] = useState<TemplatesState>(() =>
+    readStoredTemplates(storageKey),
+  );
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,22 +52,6 @@ export default function TemplatesPage() {
       router.replace("/app");
     }
   }, [router, user]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem(storageKey);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as TemplatesState;
-        setTemplates({
-          dut: parsed.dut ?? defaultTemplates.dut,
-          pendencia: parsed.pendencia ?? defaultTemplates.pendencia,
-        });
-      } catch {
-        setTemplates(defaultTemplates);
-      }
-    }
-  }, [storageKey]);
 
   const handleSave = () => {
     if (typeof window === "undefined") return;
