@@ -28,10 +28,13 @@ Um único repositório GitHub (`Onigui/sof-web`) com front e API.
 ### 2.2 Web Service (Docker)
 
 1. **New +** → **Web Service** → repo `Onigui/sof-web`.
-2. **Root Directory:** `apps/api`
+2. **Root Directory:** deixe **vazio** (usa `Dockerfile` na raiz) **ou** defina `apps/api` (usa `apps/api/Dockerfile`).
 3. **Environment: Docker**
-4. **Dockerfile Path:** `Dockerfile`
-5. Variáveis:
+4. **Dockerfile Path:**
+   - Root vazio → `./Dockerfile`
+   - Root `apps/api` → `Dockerfile`
+5. **Build Command** e **Start Command:** vazios.
+6. Variáveis:
 
    | Variável | Valor |
    |----------|--------|
@@ -81,7 +84,8 @@ Vercel → Project → **Settings → Environment Variables** → atualize `NEXT
 
 | Erro | Solução |
 |------|---------|
-| `composer: command not found` | Runtime = **Docker**, root = `apps/api` |
+| `composer: command not found` | Runtime = **Docker**, não Node |
+| `Dockerfile: no such file` | Root Directory vazio + `Dockerfile` na raiz **ou** Root = `apps/api` |
 | CORS / login falha | `FRONTEND_URL` = URL exata do Vercel |
 | API lenta no 1º acesso | Plano Free do Render “dorme” ~1 min |
 | Vercel não acha Next.js | Root Directory = `apps/web` |
