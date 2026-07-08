@@ -34,7 +34,7 @@ Um único repositório GitHub (`Onigui/sof-web`) com front e API.
    - Root vazio → `./Dockerfile`
    - Root `apps/api` → `Dockerfile`
 5. **Build Command** e **Start Command:** vazios.
-5. Variáveis:
+6. Variáveis:
 
    | Variável | Valor |
    |----------|--------|
