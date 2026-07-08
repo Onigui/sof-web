@@ -7,7 +7,7 @@ Um único repositório GitHub (`Onigui/sof-web`) com front e API.
 1. Acesse https://vercel.com → login com GitHub.
 2. **Add New → Project** → importe `Onigui/sof-web`.
 3. Branch: `main`.
-4. **Root Directory:** `apps/web` (o `vercel.json` na raiz já define isso).
+4. **Root Directory:** `apps/web` (obrigatório — configure em **Settings → Build and Deployment → Root Directory**, não no `vercel.json`).
 5. **Environment Variables:**
 
    | Nome | Valor |
