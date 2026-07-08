@@ -18,12 +18,12 @@ COPY composer.json composer.lock* ./
 RUN composer update --no-interaction --prefer-dist --optimize-autoloader --no-scripts --no-dev
 
 COPY package.json package-lock.json* ./
-RUN npm ci && npm cache clean --force
+RUN if [ -f package-lock.json ]; then npm ci && npm cache clean --force; fi
 
 COPY . .
 
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts --no-dev \
-    && npm run build \
+    && if [ -f package.json ]; then npm run build; fi \
     && mkdir -p storage/framework/{sessions,views,cache,testing} storage/logs bootstrap/cache \
     && chmod -R a+rw storage bootstrap/cache
 

@@ -1,36 +1,47 @@
-# SOF Web — Portal Operacional
+# SOF — SaaS Operacional Financeira (Monorepo)
 
-Frontend Next.js do SaaS SOF (financeira). Conecta-se à API Laravel em [sof-api](https://github.com/Onigui/sof-api).
+Portal operacional + API em um único repositório.
+
+| Pasta | Stack | Deploy |
+|-------|-------|--------|
+| `apps/web` | Next.js 16 | Vercel (root directory: `apps/web`) |
+| `apps/api` | Laravel 11 | Render (Docker, root directory: `apps/api`) |
 
 ## Só navegador (sem PC)
 
-- **Estratégia:** [docs/ESTRATEGIA.md](docs/ESTRATEGIA.md) — por que manter como site e não extensão/plugin
-- **Deploy:** [docs/DEPLOY-SO-BROWSER.md](docs/DEPLOY-SO-BROWSER.md) — Vercel + Render passo a passo
-- **Arquivos da API para copiar no GitHub:** pasta [deploy/sof-api/](deploy/sof-api/)
-- **Editar no navegador:** GitHub Codespaces (botão Code → Codespaces neste repo)
+- **Estratégia:** [docs/ESTRATEGIA.md](docs/ESTRATEGIA.md)
+- **Deploy:** [docs/DEPLOY-SO-BROWSER.md](docs/DEPLOY-SO-BROWSER.md)
+- **Editar código:** GitHub → **Code** → **Codespaces** neste repositório
 
-## Configuração local (opcional)
+## Configuração rápida
+
+### Portal (apps/web)
 
 ```bash
+cd apps/web
 cp .env.example .env.local
 npm install
+npm run dev
 ```
 
-Edite `.env.local`:
+`.env.local`:
 
 ```env
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
-## Desenvolvimento
+### API (apps/api)
 
 ```bash
-npm run dev
+cd apps/api
+cp .env.example .env
+composer install
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve
 ```
 
-Abra [http://localhost:3000](http://localhost:3000).
-
-## Usuários de desenvolvimento (após seed da API)
+## Usuários de teste (após seed)
 
 | E-mail | Papel | Senha |
 |--------|-------|-------|
@@ -39,8 +50,6 @@ Abra [http://localhost:3000](http://localhost:3000).
 | gestao@casa-senior.dev | Gestão | password |
 | loja@casa-senior.dev | Loja | password |
 
-## Scripts
+## Repositório legado
 
-- `npm run dev` — servidor de desenvolvimento
-- `npm run build` — build de produção
-- `npm run lint` — ESLint
+O repositório `Onigui/sof-api` foi absorvido neste monorepo. Use apenas **`Onigui/sof-web`** (este repo) daqui em diante.

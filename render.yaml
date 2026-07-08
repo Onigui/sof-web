@@ -3,6 +3,7 @@ services:
     name: sof-api
     runtime: docker
     plan: free
+    rootDir: apps/api
     dockerfilePath: ./Dockerfile
     healthCheckPath: /up
     envVars:

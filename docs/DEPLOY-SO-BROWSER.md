@@ -1,52 +1,36 @@
 # Deploy só pelo navegador (sem PC)
 
-Tempo estimado: ~30–45 min na primeira vez.
+Um único repositório GitHub (`Onigui/sof-web`) com front e API.
 
-## Parte 1 — Portal no Vercel (sof-web)
+## Parte 1 — Portal no Vercel
 
 1. Acesse https://vercel.com → login com GitHub.
 2. **Add New → Project** → importe `Onigui/sof-web`.
-3. Branch: `main` (ou `cursor/saas-ready-945d` se ainda não mergeou).
-4. **Environment Variables:**
+3. Branch: `main`.
+4. **Root Directory:** `apps/web` (o `vercel.json` na raiz já define isso).
+5. **Environment Variables:**
 
-   | Nome | Valor (preencha depois da API) |
-   |------|--------------------------------|
-   | `NEXT_PUBLIC_API_BASE_URL` | `https://SEU-API.onrender.com` |
+   | Nome | Valor |
+   |------|-------|
+   | `NEXT_PUBLIC_API_BASE_URL` | URL do Render (sem `/api`) |
 
-5. **Deploy**. Anote a URL: `https://xxxx.vercel.app`.
+6. **Deploy**. Anote a URL: `https://xxxx.vercel.app`.
 
 ---
 
-## Parte 2 — API no Render (sof-api)
+## Parte 2 — API no Render
 
-### 2.1 Arquivos no GitHub (obrigatório)
-
-O Render em modo **Node** não tem Composer. É preciso o **Dockerfile** na `main` do `sof-api`.
-
-**Pelo navegador:**
-
-1. Abra https://github.com/Onigui/sof-api
-2. Para cada arquivo abaixo, **Add file** → cole o conteúdo de `deploy/sof-api/` **neste repositório sof-web** (mesmos nomes de pasta):
-
-   | Criar no sof-api | Copiar de |
-   |------------------|-----------|
-   | `Dockerfile` | `deploy/sof-api/Dockerfile` |
-   | `docker/entrypoint.sh` | `deploy/sof-api/docker/entrypoint.sh` |
-   | `render.yaml` | `deploy/sof-api/render.yaml` (opcional) |
-
-3. **Commit** na branch `main`.
-
-### 2.2 Postgres no Render
+### 2.1 Postgres
 
 1. https://dashboard.render.com → **New +** → **PostgreSQL** → Free.
 2. Copie a **Internal Database URL**.
 
-### 2.3 Web Service (Docker)
+### 2.2 Web Service (Docker)
 
-1. **New +** → **Web Service** → repo `Onigui/sof-api`.
-2. **Environment: Docker** (não Node).
-3. **Dockerfile Path:** `Dockerfile`.
-4. **Build Command** e **Start Command:** vazios.
+1. **New +** → **Web Service** → repo `Onigui/sof-web`.
+2. **Root Directory:** `apps/api`
+3. **Environment: Docker**
+4. **Dockerfile Path:** `Dockerfile`
 5. Variáveis:
 
    | Variável | Valor |
@@ -62,13 +46,11 @@ O Render em modo **Node** não tem Composer. É preciso o **Dockerfile** na `mai
    | `QUEUE_CONNECTION` | `sync` |
    | `CACHE_STORE` | `database` |
 
-**Gerar `APP_KEY` sem PC:** GitHub → `sof-api` → **Code** → **Codespaces** → **Create codespace** → no terminal:
+**Gerar `APP_KEY`:** GitHub → **Code** → **Codespaces** → terminal:
 
 ```bash
-php artisan key:generate --show
+cd apps/api && php artisan key:generate --show
 ```
-
-Copie o valor para `APP_KEY` no Render.
 
 6. **Deploy**. Teste: `https://SEU-SERVICO.onrender.com/up`
 
@@ -78,13 +60,9 @@ Copie o valor para `APP_KEY` no Render.
 php artisan db:seed --force
 ```
 
-### 2.4 Ligar Vercel à API
+### 2.3 Ligar Vercel à API
 
-Vercel → Project → **Settings → Environment Variables** → atualize:
-
-`NEXT_PUBLIC_API_BASE_URL` = URL do Render (sem `/api`).
-
-**Redeploy** o projeto Vercel.
+Vercel → Project → **Settings → Environment Variables** → atualize `NEXT_PUBLIC_API_BASE_URL` e **Redeploy**.
 
 ---
 
@@ -92,9 +70,9 @@ Vercel → Project → **Settings → Environment Variables** → atualize:
 
 | Tarefa | Onde |
 |--------|------|
-| Mudar tela do portal | GitHub `sof-web` → Edit ou Codespaces |
-| Mudar API | GitHub `sof-api` → Edit ou Codespaces |
-| Ver se build passou | Vercel / Render dashboards |
+| Tela do portal | `apps/web` → Edit ou Codespaces |
+| API / regras de negócio | `apps/api` → Edit ou Codespaces |
+| Build | Vercel + Render dashboards |
 | Login de teste | `operador@casa-senior.dev` / `password` |
 
 ---
@@ -103,7 +81,7 @@ Vercel → Project → **Settings → Environment Variables** → atualize:
 
 | Erro | Solução |
 |------|---------|
-| `composer: command not found` | Runtime = **Docker**, não Node |
-| `composer.lock` desatualizado | Dockerfile já roda `composer update` |
+| `composer: command not found` | Runtime = **Docker**, root = `apps/api` |
 | CORS / login falha | `FRONTEND_URL` = URL exata do Vercel |
 | API lenta no 1º acesso | Plano Free do Render “dorme” ~1 min |
+| Vercel não acha Next.js | Root Directory = `apps/web` |

@@ -1,0 +1,53 @@
+name: Bootstrap Laravel API
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo (empty or not)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Stop if repo already bootstrapped
+        run: |
+          if [ -f artisan ] || [ -f composer.json ]; then
+            echo "Repo already has Laravel/composer.json. Aborting to avoid overwrite."
+            exit 1
+          fi
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer:v2
+
+      - name: Create Laravel 11 project in temp dir
+        run: |
+          composer create-project laravel/laravel tmpapp "^11.0" --no-interaction
+          rsync -a tmpapp/ ./
+          rm -rf tmpapp
+
+      - name: Require Sanctum
+        run: |
+          composer require laravel/sanctum --no-interaction
+          php artisan vendor:publish --provider="Laravel\\Sanctum\\SanctumServiceProvider" --force
+
+      - name: Make API-friendly defaults
+        run: |
+          # ensure app key exists (for local/testing)
+          php artisan key:generate --force
+
+      - name: Commit & push bootstrap
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -A
+          git commit -m "chore: bootstrap laravel 11 api + sanctum" || exit 0
+          git push
