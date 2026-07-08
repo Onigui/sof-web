@@ -1,19 +1,13 @@
 {
-  "name": "SOF Monorepo (Codespaces)",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
-  "features": {
-    "ghcr.io/devcontainers/features/php:1": {
-      "version": "8.3"
-    }
-  },
+  "name": "SOF Monorepo",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
   "postCreateCommand": "cd apps/web && npm install",
   "forwardPorts": [3000, 8000],
   "customizations": {
     "vscode": {
       "extensions": [
         "dbaeumer.vscode-eslint",
-        "bradlc.vscode-tailwindcss",
-        "bmewburn.vscode-intelephense-client"
+        "bradlc.vscode-tailwindcss"
       ]
     }
   }

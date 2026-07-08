@@ -49,13 +49,23 @@ Um único repositório GitHub (`Onigui/sof-web`) com front e API.
    | `QUEUE_CONNECTION` | `sync` |
    | `CACHE_STORE` | `database` |
 
-**Gerar `APP_KEY`:** GitHub → **Code** → **Codespaces** → terminal:
+**Gerar `APP_KEY` (escolha uma opção):**
+
+**Opção A — GitHub Actions (recomendado se Codespaces não abrir):**
+
+1. GitHub → **Actions** → workflow **Gerar APP_KEY** → **Run workflow**
+2. Abra o job concluído → expanda o step **Exibir APP_KEY para o Render**
+3. Copie o valor `base64:...` e cole em `APP_KEY` no Render
+
+**Opção B — Codespaces:**
+
+GitHub → **Code** → **Codespaces** → terminal:
 
 ```bash
 cd apps/api && php artisan key:generate --show
 ```
 
-6. **Deploy**. Teste: `https://SEU-SERVICO.onrender.com/up`
+7. **Deploy**. Teste: `https://SEU-SERVICO.onrender.com/up`
 
 7. Shell do Render:
 

@@ -1,0 +1,33 @@
+name: Gerar APP_KEY
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: gd, zip, bcmath, pdo_pgsql
+          coverage: none
+
+      - name: Instalar dependências da API
+        working-directory: apps/api
+        run: composer install --no-interaction --prefer-dist --no-dev --quiet
+
+      - name: Exibir APP_KEY para o Render
+        working-directory: apps/api
+        run: |
+          echo ""
+          echo "============================================================"
+          echo "Cole o valor abaixo em APP_KEY no Render (Environment):"
+          echo "============================================================"
+          php artisan key:generate --show
+          echo "============================================================"
