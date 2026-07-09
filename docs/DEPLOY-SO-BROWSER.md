@@ -14,7 +14,9 @@ Um único repositório GitHub (`Onigui/sof-web`) com front e API.
    |------|-------|
    | `NEXT_PUBLIC_API_BASE_URL` | URL do Render (sem `/api`) |
 
-6. **Deploy**. Anote a URL: `https://xxxx.vercel.app`.
+6. **Deploy**. Anote a URL: `https://xxxx.vercel.app` — **este é o link do sistema** (login, propostas, etc.).
+
+> A URL do Render é só a **API**. Abrir no navegador mostra JSON de status, não o portal.
 
 ---
 
