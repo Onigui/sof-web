@@ -67,11 +67,13 @@ cd apps/api && php artisan key:generate --show
 
 7. **Deploy**. Teste: `https://SEU-SERVICO.onrender.com/up`
 
-7. Shell do Render:
+7. Shell do Render (obrigatório na primeira vez):
 
 ```bash
 php artisan db:seed --force
 ```
+
+Sem o seed, o login retorna "Credenciais inválidas" mesmo com senha correta.
 
 ### 2.3 Ligar Vercel à API
 

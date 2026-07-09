@@ -19,6 +19,7 @@ use App\Policies\PropostaPolicy;
 use App\Policies\RegiaoPolicy;
 use App\Policies\RelatorioRunPolicy;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -30,6 +31,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
+
         Gate::policy(AuditLog::class, AuditPolicy::class);
         Gate::policy(DetranQuery::class, DetranQueryPolicy::class);
         Gate::policy(Documento::class, DocumentoPolicy::class);

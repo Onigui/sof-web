@@ -62,6 +62,42 @@ const unwrapPayload = <T>(json: unknown): T => {
   return json as T;
 };
 
+const parseErrorMessage = async (response: Response) => {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    try {
+      const data = (await response.json()) as {
+        message?: string;
+        errors?: Record<string, string[]>;
+      };
+
+      if (data.message) {
+        return data.message;
+      }
+
+      if (data.errors) {
+        const first = Object.values(data.errors).flat()[0];
+        if (first) {
+          return first;
+        }
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  try {
+    const text = await response.text();
+    if (text.includes("<!DOCTYPE html>")) {
+      return "A API retornou HTML em vez de JSON. Verifique NEXT_PUBLIC_API_BASE_URL e o deploy da API.";
+    }
+    return text || "Request failed";
+  } catch {
+    return "Request failed";
+  }
+};
+
 export const apiFetch = async <T>(
   path: string,
   options: ApiOptions = {},
@@ -80,6 +116,12 @@ export const apiFetch = async <T>(
     headers.set("Content-Type", "application/json");
   }
 
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
+  }
+
+  headers.set("X-Requested-With", "XMLHttpRequest");
+
   const response = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers,
@@ -95,7 +137,7 @@ export const apiFetch = async <T>(
   }
 
   if (!response.ok) {
-    const message = await response.text();
+    const message = await parseErrorMessage(response);
     throw new Error(message || "Request failed");
   }
 
@@ -117,6 +159,12 @@ export const apiDownload = async (
   if (!options.skipAuth && token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
+
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
+  }
+
+  headers.set("X-Requested-With", "XMLHttpRequest");
 
   const response = await fetch(`${baseUrl}${path}`, {
     ...options,
