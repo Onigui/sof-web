@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getApiBaseUrl } from "@/lib/api";
 import { getUser } from "@/lib/session";
 
 type Actor = {
@@ -86,7 +86,7 @@ export default function AuditoriaPage() {
   }, [query]);
 
   const handleExport = () => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+    const baseUrl = getApiBaseUrl();
     const url = `${baseUrl}/api/v1/audit/export?format=csv${query ? `&${query.slice(1)}` : ""}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };

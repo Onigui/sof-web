@@ -13,7 +13,11 @@ export class SubscriptionRequiredError extends Error {
   }
 }
 
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, "");
+
+const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL ?? "");
+
+export const getApiBaseUrl = () => baseUrl;
 
 if (!baseUrl) {
   console.warn("NEXT_PUBLIC_API_BASE_URL is not set.");
