@@ -6,6 +6,11 @@ if [ -z "$APP_KEY" ]; then
   exit 1
 fi
 
+if [ -z "$DATABASE_URL" ] && [ "${DB_CONNECTION:-sqlite}" = "sqlite" ]; then
+  echo "ERRO: defina DATABASE_URL (Postgres do Render) e DB_CONNECTION=pgsql."
+  exit 1
+fi
+
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
