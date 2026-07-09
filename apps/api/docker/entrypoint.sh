@@ -10,6 +10,11 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan migrate --force
+
+if [ "${SEED_ON_DEPLOY:-true}" = "true" ]; then
+  php artisan db:seed --force
+fi
+
 php artisan storage:link 2>/dev/null || true
 
 exec php artisan serve --host=0.0.0.0 --port="${PORT:-8080}"

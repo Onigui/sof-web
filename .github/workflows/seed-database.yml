@@ -1,0 +1,39 @@
+name: Seed banco (produção)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: gd, zip, bcmath, pdo_pgsql
+          coverage: none
+
+      - name: Instalar dependências
+        working-directory: apps/api
+        run: composer install --no-interaction --prefer-dist --no-dev --quiet
+
+      - name: Migrar e popular banco
+        working-directory: apps/api
+        env:
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          APP_ENV: production
+          DB_CONNECTION: pgsql
+          DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "ERRO: configure o secret RENDER_DATABASE_URL no GitHub (Settings → Secrets)."
+            exit 1
+          fi
+          php artisan migrate --force
+          php artisan db:seed --force
+          echo "Seed concluído com sucesso."

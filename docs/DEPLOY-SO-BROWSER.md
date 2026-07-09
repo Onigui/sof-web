@@ -67,13 +67,28 @@ cd apps/api && php artisan key:generate --show
 
 7. **Deploy**. Teste: `https://SEU-SERVICO.onrender.com/up`
 
-7. Shell do Render (obrigatório na primeira vez):
+7. **Usuários de teste (plano Free — sem Shell no Render)**
 
-```bash
-php artisan db:seed --force
-```
+O plano gratuito do Render **não inclui Shell**. Duas opções:
 
-Sem o seed, o login retorna "Credenciais inválidas" mesmo com senha correta.
+**Opção A — automático (recomendado):** após merge do PR com seed no deploy, cada redeploy da API roda `db:seed` sozinho (variável `SEED_ON_DEPLOY=true` por padrão).
+
+**Opção B — GitHub Actions (alternativa):**
+
+1. Render → Postgres → copie a **External Database URL**
+2. GitHub → repo → **Settings → Secrets → Actions** → crie `RENDER_DATABASE_URL`
+3. **Actions** → **Seed banco (produção)** → **Run workflow**
+
+Usuários criados:
+
+| E-mail | Senha |
+|--------|-------|
+| operador@casa-senior.dev | password |
+| analista@casa-senior.dev | password |
+| gestao@casa-senior.dev | password |
+| loja@casa-senior.dev | password |
+
+Para desativar seed automático depois: Render → `SEED_ON_DEPLOY=false`
 
 ### 2.3 Ligar Vercel à API
 
