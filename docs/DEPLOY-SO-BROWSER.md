@@ -12,7 +12,7 @@ Um único repositório GitHub (`Onigui/sof-web`) com front e API.
 
    | Nome | Valor |
    |------|-------|
-   | `NEXT_PUBLIC_API_BASE_URL` | URL do Render (sem `/api`) |
+   | `NEXT_PUBLIC_API_BASE_URL` | `https://sof-web.onrender.com` (sem barra no final) |
 
 6. **Deploy**. Anote a URL: `https://xxxx.vercel.app`.
 
@@ -42,7 +42,7 @@ Um único repositório GitHub (`Onigui/sof-web`) com front e API.
    | `APP_DEBUG` | `false` |
    | `APP_KEY` | ver abaixo |
    | `APP_URL` | `https://SEU-SERVICO.onrender.com` |
-   | `FRONTEND_URL` | URL do Vercel (sem barra no final) |
+   | `FRONTEND_URL` | URL do Vercel, ex: `https://sof-web1.vercel.app` (sem barra no final) |
    | `DB_CONNECTION` | `pgsql` |
    | `DATABASE_URL` | Internal URL do Postgres |
    | `SESSION_DRIVER` | `database` |
@@ -96,6 +96,6 @@ Vercel → Project → **Settings → Environment Variables** → atualize `NEXT
 |------|---------|
 | `composer: command not found` | Runtime = **Docker**, não Node |
 | `Dockerfile: no such file` | Root Directory vazio + `Dockerfile` na raiz **ou** Root = `apps/api` |
-| CORS / login falha | `FRONTEND_URL` = URL exata do Vercel |
+| CORS / login falha | `FRONTEND_URL` = URL exata do Vercel; `NEXT_PUBLIC_API_BASE_URL` sem `/` no final; redeploy Render após mudar env |
 | API lenta no 1º acesso | Plano Free do Render “dorme” ~1 min |
 | Vercel não acha Next.js | Root Directory = `apps/web` |

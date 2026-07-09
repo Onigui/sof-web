@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getApiBaseUrl } from "@/lib/api";
 import { getToken, getUser } from "@/lib/session";
 
 type DetranQuery = {
@@ -92,7 +92,7 @@ export default function DetranPage() {
     setActionMessage(null);
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+      const baseUrl = getApiBaseUrl();
       const token = getToken();
       const payload = {
         proposta_id: newPropostaId || undefined,

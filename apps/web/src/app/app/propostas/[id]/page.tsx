@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getApiBaseUrl } from "@/lib/api";
 import { getToken, getUser } from "@/lib/session";
 
 type AuditEntry = {
@@ -314,7 +314,7 @@ export default function PropostaDetalhePage() {
     setSendSuccess(null);
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+      const baseUrl = getApiBaseUrl();
       const token = getToken();
       const response = await fetch(
         `${baseUrl}/api/v1/propostas/${propostaId}/enviar`,
