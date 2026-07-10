@@ -27,6 +27,8 @@ Um único repositório GitHub (`Onigui/sof-web`) com front e API.
 
 ### 2.2 Web Service (Docker)
 
+**Importante:** depois de criar o Web Service, volte em **Environment** e use **Link Database** para vincular o Postgres criado em 2.1. Isso preenche `DATABASE_URL` automaticamente. Sem isso, a API tenta `127.0.0.1:5432` e o deploy falha.
+
 1. **New +** → **Web Service** → repo `Onigui/sof-web`.
 2. **Root Directory:** deixe **vazio** (usa `Dockerfile` na raiz) **ou** defina `apps/api` (usa `apps/api/Dockerfile`).
 3. **Environment: Docker**
@@ -114,5 +116,7 @@ Vercel → Project → **Settings → Environment Variables** → atualize `NEXT
 | `composer: command not found` | Runtime = **Docker**, não Node |
 | `Dockerfile: no such file` | Root Directory vazio + `Dockerfile` na raiz **ou** Root = `apps/api` |
 | CORS / login falha | `FRONTEND_URL` = URL exata do Vercel; `NEXT_PUBLIC_API_BASE_URL` sem `/` no final; redeploy Render após mudar env |
+| `127.0.0.1:5432 connection refused` | Web Service → **Environment** → **Link Database** (Postgres) ou cole `DATABASE_URL` (Internal URL) manualmente |
+| API cai no deploy / `regiaos` | `DATABASE_URL` + `DB_CONNECTION=pgsql`; merge PR com fix Regiao |
 | API lenta no 1º acesso | Plano Free do Render “dorme” ~1 min |
 | Vercel não acha Next.js | Root Directory = `apps/web` |
