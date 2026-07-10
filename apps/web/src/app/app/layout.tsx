@@ -33,11 +33,13 @@ const roleLabels: Record<string, string> = {
 
 const navByRole: Record<string, NavItem[]> = {
   OPERADOR: [
+    { label: "Início", href: "/app" },
     { label: "Propostas", href: "/app/propostas" },
     { label: "DUT", href: "/app/dut" },
     { label: "Notificações", href: "/app/notificacoes" },
   ],
   ANALISTA: [
+    { label: "Início", href: "/app" },
     { label: "Fila", href: "/app/fila" },
     { label: "Propostas", href: "/app/propostas" },
     { label: "Integração", href: "/app/integracao" },
@@ -45,6 +47,7 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Notificações", href: "/app/notificacoes" },
   ],
   GESTAO: [
+    { label: "Início", href: "/app" },
     { label: "Fila", href: "/app/fila" },
     { label: "Propostas", href: "/app/propostas" },
     { label: "Integração", href: "/app/integracao" },
@@ -53,7 +56,9 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Config", href: "/app/config" },
     { label: "Notificações", href: "/app/notificacoes" },
   ],
-  LOJA: [{ label: "Leads", href: "/app/leads" }],
+  LOJA: [
+    { label: "Leads", href: "/app/leads" },
+  ],
 };
 
 const getTrialDaysLeft = (trialEndsAt?: string) => {
@@ -264,28 +269,27 @@ export default function AppLayout({
       </header>
 
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-6">
-        {user?.role !== "OPERADOR" && user?.role !== "LOJA" ? (
-          <aside className="hidden w-56 flex-shrink-0 rounded-2xl border border-slate-200 bg-white p-4 md:block">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Navegação
-            </p>
-            <nav className="flex flex-col gap-2 text-sm">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-lg px-3 py-2 transition ${
-                    pathname === item.href
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </aside>
-        ) : null}
+        <aside className="hidden w-56 flex-shrink-0 rounded-2xl border border-slate-200 bg-white p-4 md:block">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Navegação
+          </p>
+          <nav className="flex flex-col gap-2 text-sm">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`rounded-lg px-3 py-2 transition ${
+                  pathname === item.href ||
+                  (item.href !== "/app" && pathname.startsWith(`${item.href}/`))
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </aside>
 
         <main className="flex-1 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           {children}
