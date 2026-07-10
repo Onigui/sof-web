@@ -13,7 +13,7 @@ class PropostaPolicy extends BasePolicy
             return false;
         }
 
-        return $user->id === $proposta->operador_id
+        return $this->sameUserId($user, $proposta->operador_id)
             || in_array($user->role, [User::ROLE_ANALISTA, User::ROLE_GESTAO], true);
     }
 
@@ -28,7 +28,7 @@ class PropostaPolicy extends BasePolicy
         }
 
         return $user->role === User::ROLE_GESTAO
-            || $user->id === $proposta->operador_id;
+            || $this->sameUserId($user, $proposta->operador_id);
     }
 
     public function enviar(User $user, Proposta $proposta): bool
@@ -41,7 +41,7 @@ class PropostaPolicy extends BasePolicy
             return $proposta->status === Proposta::STATUS_RASCUNHO;
         }
 
-        return $user->id === $proposta->operador_id
+        return $this->sameUserId($user, $proposta->operador_id)
             && $proposta->status === Proposta::STATUS_RASCUNHO;
     }
 
