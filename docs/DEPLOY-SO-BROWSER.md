@@ -20,14 +20,36 @@ Um único repositório GitHub (`Onigui/sof-web`) com front e API.
 
 ## Parte 2 — API no Render
 
-### 2.1 Postgres
+A API Laravel **precisa de um Postgres separado**. No Render você terá **2 serviços**:
 
-1. https://dashboard.render.com → **New +** → **PostgreSQL** → Free.
-2. Copie a **Internal Database URL**.
+| Serviço | Tipo no Render |
+|---------|----------------|
+| Banco de dados | **PostgreSQL** |
+| API | **Web Service** (Docker) |
+
+Se você só criou o Web Service, **não vai aparecer Postgres nem “Link Database”** — é preciso criar o banco primeiro (passo 2.1).
+
+### 2.1 Postgres (criar ANTES da API)
+
+1. https://dashboard.render.com → botão **New +** (canto superior direito)
+2. Escolha **PostgreSQL** (não é Web Service)
+3. **Name:** ex. `sof-db` | **Region:** mesma do Web Service | **Plan:** Free
+4. **Create Database** e aguarde status **Available**
+5. Abra o serviço Postgres → aba **Info** ou **Connections**
+6. Copie a **Internal Database URL** (começa com `postgresql://...`)
 
 ### 2.2 Web Service (Docker)
 
-**Importante:** depois de criar o Web Service, volte em **Environment** e use **Link Database** para vincular o Postgres criado em 2.1. Isso preenche `DATABASE_URL` automaticamente. Sem isso, a API tenta `127.0.0.1:5432` e o deploy falha.
+**Importante:** depois de criar o Postgres (2.1), volte no Web Service → **Environment**:
+
+- **Se aparecer “Link Database” / “Add from existing”:** vincule o Postgres — o Render preenche `DATABASE_URL` sozinho.
+- **Se NÃO aparecer** (comum no plano Free ou em contas novas): adicione **manualmente**:
+
+  | Variável | Valor |
+  |----------|--------|
+  | `DATABASE_URL` | Internal Database URL copiada no passo 2.1 |
+
+Sem `DATABASE_URL`, a API tenta `127.0.0.1:5432` e o deploy falha.
 
 1. **New +** → **Web Service** → repo `Onigui/sof-web`.
 2. **Root Directory:** deixe **vazio** (usa `Dockerfile` na raiz) **ou** defina `apps/api` (usa `apps/api/Dockerfile`).
@@ -116,7 +138,7 @@ Vercel → Project → **Settings → Environment Variables** → atualize `NEXT
 | `composer: command not found` | Runtime = **Docker**, não Node |
 | `Dockerfile: no such file` | Root Directory vazio + `Dockerfile` na raiz **ou** Root = `apps/api` |
 | CORS / login falha | `FRONTEND_URL` = URL exata do Vercel; `NEXT_PUBLIC_API_BASE_URL` sem `/` no final; redeploy Render após mudar env |
-| `127.0.0.1:5432 connection refused` | Web Service → **Environment** → **Link Database** (Postgres) ou cole `DATABASE_URL` (Internal URL) manualmente |
+| `127.0.0.1:5432 connection refused` | Crie um serviço **PostgreSQL** no Render (New + → PostgreSQL). Depois cole a **Internal URL** em `DATABASE_URL` no Web Service |
 | API cai no deploy / `regiaos` | `DATABASE_URL` + `DB_CONNECTION=pgsql`; merge PR com fix Regiao |
 | API lenta no 1º acesso | Plano Free do Render “dorme” ~1 min |
 | Vercel não acha Next.js | Root Directory = `apps/web` |
