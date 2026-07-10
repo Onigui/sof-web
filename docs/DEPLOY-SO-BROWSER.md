@@ -46,7 +46,7 @@ Um único repositório GitHub (`Onigui/sof-web`) com front e API.
    | `APP_URL` | `https://SEU-SERVICO.onrender.com` |
    | `FRONTEND_URL` | URL do Vercel, ex: `https://sof-web1.vercel.app` (sem barra no final) |
    | `DB_CONNECTION` | `pgsql` |
-   | `DATABASE_URL` | Internal URL do Postgres |
+   | `DATABASE_URL` | **Internal** Database URL do Postgres (Render preenche ao vincular o banco) |
    | `SESSION_DRIVER` | `database` |
    | `QUEUE_CONNECTION` | `sync` |
    | `CACHE_STORE` | `database` |
