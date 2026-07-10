@@ -48,11 +48,33 @@ const parseSubscriptionMessage = async (response: Response) => {
   }
 };
 
+const isPaginatedList = (
+  value: unknown,
+): value is { data: unknown[] } => {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return (
+    Array.isArray(record.data) &&
+    ("current_page" in record ||
+      "per_page" in record ||
+      "last_page" in record ||
+      "total" in record)
+  );
+};
+
 const unwrapPayload = <T>(json: unknown): T => {
   if (json !== null && typeof json === "object") {
     const record = json as Record<string, unknown>;
     if ("data" in record) {
-      return record.data as T;
+      const inner = record.data;
+      if (isPaginatedList(inner)) {
+        return inner.data as T;
+      }
+      return inner as T;
     }
     if ("user" in record && Object.keys(record).length === 1) {
       return record.user as T;
