@@ -21,6 +21,7 @@ return new class extends Migration
                 User::ROLE_OPERADOR,
                 User::ROLE_ANALISTA,
                 User::ROLE_GESTAO,
+                User::ROLE_LOJA,
             ])->after('password')->default(User::ROLE_OPERADOR);
         });
     }
