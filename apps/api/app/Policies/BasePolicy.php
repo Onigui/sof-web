@@ -8,10 +8,21 @@ class BasePolicy
 {
     protected function sameEmpresa(User $user, object $model): bool
     {
-        if (!property_exists($model, 'empresa_id')) {
+        $empresaId = data_get($model, 'empresa_id');
+
+        if ($empresaId === null) {
             return false;
         }
 
-        return $user->empresa_id === $model->empresa_id;
+        return (int) $user->empresa_id === (int) $empresaId;
+    }
+
+    protected function sameUserId(User $user, int|string|null $userId): bool
+    {
+        if ($userId === null) {
+            return false;
+        }
+
+        return (int) $user->id === (int) $userId;
     }
 }
